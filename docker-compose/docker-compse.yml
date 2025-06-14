@@ -1,0 +1,46 @@
+services:
+  backend:
+    build: .
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/appdb
+      - SPRING_DATASOURCE_USERNAME=admin
+      - SPRING_DATASOURCE_PASSWORD=clave
+    networks:
+      - red-privada
+
+  db:
+    image: postgres:15
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - ./data:/var/lib/postgresql/data
+
+  backend:
+    build: .
+    ports:
+      - "${SPRING_PORT}:${SPRING_PORT}"
+      - "${ACTUATOR_PORT}:${ACTUATOR_PORT}"
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/${POSTGRES_DB}
+      - SPRING_DATASOURCE_USERNAME=${POSTGRES_USER}
+      - SPRING_DATASOURCE_PASSWORD=${POSTGRES_PASSWORD}
+  healthcheck:
+    test: ["CMD-SHELL", "pg_isready -U admin -d appdb"]
+    interval: 10s
+    timeout: 5s
+    retries: 5
+  networks:
+    - red-privada
+
+networks:
+  red-privada:
+    driver: bridge
